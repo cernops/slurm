@@ -69,7 +69,7 @@ strong_alias(s_p_hashtbl_create,	slurm_s_p_hashtbl_create);
 strong_alias(s_p_hashtbl_destroy,	slurm_s_p_hashtbl_destroy);
 strong_alias(s_p_parse_file,		slurm_s_p_parse_file);
 
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 65536
 
 #define CONF_HASH_LEN 26
 
