@@ -64,6 +64,9 @@
 # Use readline by default on all systems
 %slurm_with_opt readline
 
+# Use mysql by default
+%slurm_with_opt mysql
+
 # Build with PAM by default on linux
 %ifos linux
 %slurm_with_opt pam
