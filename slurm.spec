@@ -103,8 +103,8 @@ Summary: Simple Linux Utility for Resource Management
 
 License: GPL
 Group: System Environment/Base
-Source: %{name}-%{version}-%{release}.tgz
-BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
+Source: %{name}-%{version}.tgz
+BuildRoot: %{_tmppath}/%{name}-%{version}
 URL: http://slurm.schedmd.com/
 
 Requires: slurm-plugins
@@ -409,7 +409,7 @@ Gives the ability for SLURM to use Berkeley Lab Checkpoint/Restart
 #############################################################################
 
 %prep
-%setup -n %{name}-%{version}-%{release}
+%setup -n %{name}-%{version}
 
 %build
 %configure \
