@@ -1,4 +1,4 @@
-PKGNAME=slurm-2.4.4
+PKGNAME=slurm-2.6.3
 TARFILE=$(PKGNAME).tgz
 
 all:
