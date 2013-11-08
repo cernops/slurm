@@ -96,7 +96,7 @@
 %endif
 
 Name:    slurm
-Version: 2.6.3
+Version: 2.6.4
 Release: 1.cern1%{?dist}
 
 Summary: Simple Linux Utility for Resource Management
