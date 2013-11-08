@@ -717,8 +717,17 @@ uint16_t _can_job_run_on_node(struct job_record *job_ptr, bitstr_t *core_map,
 	    ((job_ptr->details->cpus_per_task > 1) &&
 	     (gres_cpus < job_ptr->details->cpus_per_task)))
 		gres_cpus = 0;
-	while (gres_cpus < cpus)
-		cpus -= cpu_alloc_size;
+
+	while (gres_cpus < cpus) {
+		if ((int) cpus < cpu_alloc_size) {
+			debug3("cons_res: cpu_alloc_size > cpus, cannot "
+			       "continue (node: %s)", node_ptr->name);
+			cpus = 0;
+			break;
+		} else {
+			cpus -= cpu_alloc_size;
+		}
+	}
 
 	if (cpus == 0)
 		bit_nclear(core_map, core_start_bit, core_end_bit);
@@ -1957,11 +1966,12 @@ static uint16_t *_select_nodes(struct job_record *job_ptr, uint32_t min_nodes,
 				uint16_t cr_type, bool test_only,
 				bitstr_t *part_core_map)
 {
-	int rc;
+	int i, rc;
 	uint16_t *cpu_cnt, *cpus = NULL;
 	uint32_t start, n, a;
 	//char str[100];
-	bitstr_t *req_map = job_ptr->details->req_node_bitmap;
+	struct job_details *details_ptr = job_ptr->details;
+	bitstr_t *req_map = details_ptr->req_node_bitmap;
 
 	if (bit_set_count(node_map) < min_nodes)
 		return NULL;
@@ -1995,9 +2005,15 @@ static uint16_t *_select_nodes(struct job_record *job_ptr, uint32_t min_nodes,
 
 	//bit_fmt(str, (sizeof(str) - 1), node_map);
 	//info("_select_nodes nodemap: %s", str);
+	//bit_fmt(str, (sizeof(str) - 1), core_map);
+	//info("_select_nodes coremap: %s", str);
 
-	//bit_fmt(str, (sizeof(str) - 1), node_map);
-	//info("_select_nodes nodemap: %s", str);
+	if (details_ptr->ntasks_per_node && details_ptr->num_tasks) {
+		i  = details_ptr->num_tasks;
+		i += (details_ptr->ntasks_per_node - 1);
+		i /= details_ptr->ntasks_per_node;
+		min_nodes = MAX(min_nodes, i);
+	}
 
 	/* choose the best nodes for the job */
 	rc = _choose_nodes(job_ptr, node_map, min_nodes, max_nodes, req_nodes,

@@ -618,13 +618,13 @@ _fill_registration_msg(slurm_node_registration_status_msg_t *msg)
 
 	if (first_msg) {
 		first_msg = false;
-		info("Procs=%u Boards=%u Sockets=%u Cores=%u Threads=%u "
+		info("CPUs=%u Boards=%u Sockets=%u Cores=%u Threads=%u "
 		     "Memory=%u TmpDisk=%u Uptime=%u",
 		     msg->cpus, msg->boards, msg->sockets, msg->cores,
 		     msg->threads, msg->real_memory, msg->tmp_disk,
 		     msg->up_time);
 	} else {
-		debug3("Procs=%u Boards=%u Sockets=%u Cores=%u Threads=%u "
+		debug3("CPUs=%u Boards=%u Sockets=%u Cores=%u Threads=%u "
 		       "Memory=%u TmpDisk=%u Uptime=%u",
 		       msg->cpus, msg->boards, msg->sockets, msg->cores,
 		       msg->threads, msg->real_memory, msg->tmp_disk,
@@ -840,7 +840,7 @@ _read_config(void)
 		if (cf->fast_schedule) {
 			info("Node configuration differs from hardware: "
 			     "CPUs=%u:%u(hw) Boards=%u:%u(hw) "
-			     "Sockets=%u:%u(hw) CoresPerSocket=%u:%u(hw) "
+			     "SocketsPerBoard=%u:%u(hw) CoresPerSocket=%u:%u(hw) "
 			     "ThreadsPerCore=%u:%u(hw)",
 			     conf->cpus,    conf->actual_cpus,
 			     conf->boards,  conf->actual_boards,
@@ -855,7 +855,7 @@ _read_config(void)
 			      "the bitmaps the slurmctld must create before "
 			      "the slurmd registers.\n"
 			      "   CPUs=%u:%u(hw) Boards=%u:%u(hw) "
-			      "Sockets=%u:%u(hw) CoresPerSocket=%u:%u(hw) "
+			      "SocketsPerBoard=%u:%u(hw) CoresPerSocket=%u:%u(hw) "
 			      "ThreadsPerCore=%u:%u(hw)",
 			      conf->cpus,    conf->actual_cpus,
 			      conf->boards,  conf->actual_boards,
@@ -1174,7 +1174,7 @@ _print_config(void)
 	            &conf->actual_threads,
 	            &conf->block_map_size,
 	            &conf->block_map, &conf->block_map_inv);
-	printf("CPUs=%u Boards=%u Sockets=%u CoresPerSocket=%u "
+	printf("CPUs=%u Boards=%u SocketsPerBoard=%u CoresPerSocket=%u "
 	       "ThreadsPerCore=%u ",
 	       conf->actual_cpus, conf->actual_boards, conf->actual_sockets,
 	       conf->actual_cores, conf->actual_threads);
@@ -1241,6 +1241,7 @@ _process_cmdline(int ac, char **av)
 			break;
 		case 'v':
 			conf->debug_level++;
+			conf->debug_level_set = 1;
 			break;
 		case 'V':
 			print_slurm_version();
@@ -1561,8 +1562,6 @@ static int
 _slurmd_fini(void)
 {
 	interconnect_node_fini();
-	jobacct_gather_fini();
-	acct_gather_profile_fini();
 	save_cred_state(conf->vctx);
 	switch_fini();
 	slurmd_task_fini();
@@ -1572,12 +1571,12 @@ _slurmd_fini(void)
 	node_fini2();
 	gres_plugin_fini();
 	slurm_topo_fini();
-	acct_gather_energy_fini();
 	slurmd_req(NULL);	/* purge memory allocated by slurmd_req() */
 	fini_setproctitle();
 	slurm_select_fini();
 	spank_slurmd_exit();
 	cpu_freq_fini();
+	acct_gather_conf_destroy();
 
 	return SLURM_SUCCESS;
 }
@@ -1759,12 +1758,9 @@ static void _update_logging(void)
 	log_options_t *o = &conf->log_opts;
 	slurm_ctl_conf_t *cf;
 
-	/*
-	 * Initialize debug level if not already set
-	 */
+	/* Preserve execute line verbose arguments (if any) */
 	cf = slurm_conf_lock();
-	if ( (conf->debug_level == LOG_LEVEL_INFO)
-	     && (cf->slurmd_debug != (uint16_t) NO_VAL) )
+	if (!conf->debug_level_set && (cf->slurmd_debug != (uint16_t) NO_VAL))
 		conf->debug_level = cf->slurmd_debug;
 	slurm_conf_unlock();
 

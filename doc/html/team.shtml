@@ -47,7 +47,7 @@ Lead Slurm developers are:
 <li>Thomas Cadeau (Bull)</li>
 <li>Hongjia Cao (National University of Defense Technology, China)</li>
 <li>Jimmy Cao (Greenplum/EMC)</li>
-<li>Ralph Castain (Los Alamos National Laboratory, Greenplum/EMC)</li>
+<li>Ralph Castain (Intel, Greenplum/EMC, Los Alamos National Laboratory)</li>
 <li>Fran&ccedil;ois Chevallier (CEA)</li>
 <li>Daniel Christians (HP)</li>
 <li>Gilles Civario (Bull)</li>
@@ -79,6 +79,7 @@ Lead Slurm developers are:
 <li>Chris Harwell (D. E. Shaw Research)</li>
 <li>Takao Hatazaki (HP)</li>
 <li>Matthieu Hautreux (CEA, France)</li>
+<li>Dave Henseler (Cray)</li>
 <li>Chris Holmes (HP)</li>
 <li>David H&ouml;ppner</li>
 <li>Nathan Huff (North Dakota State University)</li>
@@ -119,12 +120,15 @@ Lead Slurm developers are:
 <li>Gennaro Oliva (Institute of High Performance Computing and Networking, Italy)</li>
 <li>Alan Orth (International Livestock Research Institute, Kenya)</li>
 <br>
+<li>Juan Pancorbo (Leibniz-Rechenzentrum, Germany)</li>
+<li>Chrysovalantis Paschoulas (Juelich Supercomputing Centre, Germany)</li>
 <li>R&eacute;mi Palancher</li>
 <li>Alejandro Lucero Palau (Barcelona Supercomputing Center, Spain)</li>
 <li>Daniel Palermo (HP)</li>
 <li>Martin Perry (Bull)</li>
 <li>Dan Phung (Lawrence Livermore National Laboratory/Columbia University)</li>
 <li>Ashley Pittman (Quadrics, UK)</li>
+<li>Ludovic Prevost (NEC, France)</li>
 <br>
 <li>Vijay Ramasubramanian (University of Maryland)</li>
 <li>Krishnakumar Ravi[KK] (HP)</li>
@@ -143,6 +147,7 @@ Lead Slurm developers are:
 <li>Federico Sacerdoti (D. E. Shaw Research)</li>
 <li>Aleksej Saushev</li>
 <li>Rod Schultz (Bull)</li>
+<li>Filip Skalski (University of Warsaw, Poland)</li>
 <li>Jason Sollom (Cray)</li>
 <li>Eric Soyez (Science+Computing)</li>
 <li>Marcin Stolarek</li>
@@ -172,6 +177,6 @@ Lead Slurm developers are:
 <!-- INDIVIDUALS, PLEASE KEEP IN ALPHABETICAL ORDER -->
 </ul>
 
-<p style="text-align:center;">Last modified 1 October 2013</p>
+<p style="text-align:center;">Last modified 30 October 2013</p>
 
 <!--#include virtual="footer.txt"-->

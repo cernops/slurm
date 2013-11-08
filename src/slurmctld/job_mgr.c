@@ -1978,11 +1978,43 @@ void _add_job_hash(struct job_record *job_ptr)
 }
 
 /*
+ * find_job_array_rec - return a pointer to the job record with the given
+ *	array_job_id/array_task_id
+ * IN job_id - requested job's id
+ * IN array_task_id - requested job's task id (NO_VAL if none specified)
+ * RET pointer to the job's record, NULL on error
+ */
+extern struct job_record *find_job_array_rec(uint32_t array_job_id,
+					     uint16_t array_task_id)
+{
+	ListIterator job_iterator;
+	struct job_record *job_ptr, *match_job_ptr = NULL;
+
+	if (array_task_id == (uint16_t) NO_VAL)
+		return find_job_record(array_job_id);
+
+	job_iterator = list_iterator_create(job_list);
+	while ((job_ptr = (struct job_record *) list_next(job_iterator))) {
+		if (job_ptr->array_job_id != array_job_id)
+			continue;
+
+		if (array_task_id == (uint16_t) INFINITE) {
+			match_job_ptr = job_ptr;
+			if (!IS_JOB_FINISHED(job_ptr))
+				break;
+		} else if (job_ptr->array_task_id == array_task_id) {
+			match_job_ptr = job_ptr;
+			break;
+		}
+	}
+	list_iterator_destroy(job_iterator);
+	return match_job_ptr;
+}
+
+/*
  * find_job_record - return a pointer to the job record with the given job_id
  * IN job_id - requested job's id
  * RET pointer to the job's record, NULL on error
- * global: job_list - global job list pointer
- *	job_hash - hash table into job records
  */
 struct job_record *find_job_record(uint32_t job_id)
 {
@@ -2200,7 +2232,8 @@ extern int kill_job_by_front_end_name(char *node_name)
 		} else if (IS_JOB_RUNNING(job_ptr) || suspended) {
 			job_count++;
 			if (job_ptr->batch_flag && job_ptr->details &&
-				   (job_ptr->details->requeue > 0)) {
+			    slurmctld_conf.job_requeue &&
+			    (job_ptr->details->requeue > 0)) {
 				char requeue_msg[128];
 
 				srun_node_fail(job_ptr->job_id, node_name);
@@ -2434,6 +2467,7 @@ extern int kill_running_job_by_node_name(char *node_name)
 				excise_node_from_job(job_ptr, node_ptr);
 				job_post_resize_acctg(job_ptr);
 			} else if (job_ptr->batch_flag && job_ptr->details &&
+				   slurmctld_conf.job_requeue &&
 				   (job_ptr->details->requeue > 0)) {
 				char requeue_msg[128];
 
@@ -3580,6 +3614,7 @@ extern int job_complete(uint32_t job_id, uid_t uid, bool requeue,
 	}
 
 	last_job_update = now;
+	job_ptr->time_last_active = now;   /* Timer for resending kill RPC */
 	if (job_comp_flag) {	/* job was running */
 		build_cg_bitmap(job_ptr);
 		deallocate_nodes(job_ptr, false, suspended, false);
@@ -6743,7 +6778,7 @@ extern void set_job_prio(struct job_record *job_ptr)
 		return;
 	job_ptr->priority = slurm_sched_initial_priority(lowest_prio,
 							 job_ptr);
-	if ((job_ptr->priority <= 1) ||
+	if ((job_ptr->priority == 0)   ||
 	    (job_ptr->direct_set_prio) ||
 	    (job_ptr->details && (job_ptr->details->nice != NICE_OFFSET)))
 		return;
@@ -8213,9 +8248,6 @@ int update_job(job_desc_msg_t * job_specs, uid_t uid)
 
 			detail_ptr->begin_time = job_specs->begin_time;
 			update_accounting = true;
-			if ((job_ptr->priority == 1) &&
-			    (detail_ptr->begin_time <= now))
-				set_job_prio(job_ptr);
 			slurm_make_time_str(&detail_ptr->begin_time, time_str,
 					    sizeof(time_str));
 			info("sched: update_job: setting begin to %s for "
@@ -8496,7 +8528,7 @@ fini:
 	 * based upon job submit order), recalculate the job priority, since
 	 * many factors of an update may affect priority considerations.
 	 * If job has a hold then do nothing */
-	if ((error_code == SLURM_SUCCESS) && (job_ptr->priority > 1) &&
+	if ((error_code == SLURM_SUCCESS) && (job_ptr->priority != 0) &&
 	    strcmp(slurmctld_conf.priority_type, "priority/basic"))
 		set_job_prio(job_ptr);
 
@@ -8800,7 +8832,8 @@ static void _purge_missing_jobs(int node_inx, time_t now)
 		    (job_ptr->start_time       < startup_time)	&&
 		    (node_inx == bit_ffs(job_ptr->node_bitmap))) {
 			bool requeue = false;
-			if (job_ptr->start_time < node_ptr->boot_time)
+			if (slurmctld_conf.job_requeue &&
+			    (job_ptr->start_time < node_ptr->boot_time))
 				requeue = true;
 			info("Batch JobId=%u missing from node 0",
 			     job_ptr->job_id);

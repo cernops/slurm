@@ -142,6 +142,7 @@ static bool running_decay = 0, reconfig = 0,
 static bool favor_small; /* favor small jobs over large */
 static uint32_t max_age; /* time when not to add any more
 			  * priority to a job if reached */
+static uint16_t enforce;     /* AccountingStorageEnforce */
 static uint32_t weight_age;  /* weight for age factor */
 static uint32_t weight_fs;   /* weight for Fairshare factor */
 static uint32_t weight_js;   /* weight for Job Size factor */
@@ -909,6 +910,8 @@ static void _init_grp_used_cpu_run_secs(time_t last_ran)
 	if (priority_debug)
 		info("Initializing grp_used_cpu_run_secs");
 
+	if (!(enforce & ACCOUNTING_ENFORCE_LIMITS))
+		return;
 	if (!(job_list && list_count(job_list)))
 		return;
 
@@ -918,7 +921,7 @@ static void _init_grp_used_cpu_run_secs(time_t last_ran)
 	assoc_mgr_lock(&locks);
 	while ((job_ptr = list_next(itr))) {
 		if (priority_debug)
-			debug2("job: %u",job_ptr->job_id);
+			debug2("job: %u", job_ptr->job_id);
 		qos = NULL;
 		assoc = NULL;
 		delta = 0;
@@ -935,19 +938,27 @@ static void _init_grp_used_cpu_run_secs(time_t last_ran)
 		assoc = (slurmdb_association_rec_t *) job_ptr->assoc_ptr;
 
 		if (qos) {
-			if (priority_debug)
+			if (priority_debug) {
 				info("Subtracting %"PRIu64" from qos "
-				     "%u grp_used_cpu_run_secs "
+				     "%s grp_used_cpu_run_secs "
 				     "%"PRIu64" = %"PRIu64"",
 				     delta,
-				     qos->id,
+				     qos->name,
 				     qos->usage->grp_used_cpu_run_secs,
 				     qos->usage->grp_used_cpu_run_secs -
 				     delta);
-			qos->usage->grp_used_cpu_run_secs -= delta;
+			}
+			if (qos->usage->grp_used_cpu_run_secs >= delta) {
+				qos->usage->grp_used_cpu_run_secs -= delta;
+			} else {
+				error("qos %s grp_used_cpu_run_secs underflow",
+				      qos->name);
+				qos->usage->grp_used_cpu_run_secs = 0;
+			}
 		}
+
 		while (assoc) {
-			if (priority_debug)
+			if (priority_debug) {
 				info("Subtracting %"PRIu64" from assoc %u "
 				     "grp_used_cpu_run_secs "
 				     "%"PRIu64" = %"PRIu64"",
@@ -956,7 +967,14 @@ static void _init_grp_used_cpu_run_secs(time_t last_ran)
 				     assoc->usage->grp_used_cpu_run_secs,
 				     assoc->usage->grp_used_cpu_run_secs -
 				     delta);
-			assoc->usage->grp_used_cpu_run_secs -= delta;
+			}
+			if (assoc->usage->grp_used_cpu_run_secs >= delta) {
+				assoc->usage->grp_used_cpu_run_secs -= delta;
+			} else {
+				error("assoc %u grp_used_cpu_run_secs "
+				      "underflow", assoc->id);
+				assoc->usage->grp_used_cpu_run_secs = 0;
+			}
 			assoc = assoc->usage->parent_assoc_ptr;
 		}
 	}
@@ -1466,6 +1484,7 @@ static void _internal_setup(void)
 
 	favor_small = slurm_get_priority_favor_small();
 
+	enforce = slurm_get_accounting_storage_enforce();
 	max_age = slurm_get_priority_max_age();
 	weight_age = slurm_get_priority_weight_age();
 	weight_fs = slurm_get_priority_weight_fairshare();
@@ -1475,6 +1494,7 @@ static void _internal_setup(void)
 	flags = slurmctld_conf.priority_flags;
 
 	if (priority_debug) {
+		info("priority: AccountingStorageEnforce is %u", enforce);
 		info("priority: Max Age is %u", max_age);
 		info("priority: Weight Age is %u", weight_age);
 		info("priority: Weight Fairshare is %u", weight_fs);
@@ -1579,17 +1599,19 @@ extern uint32_t priority_p_set(uint32_t last_prio, struct job_record *job_ptr)
 	return priority;
 }
 
-extern void priority_p_reconfig(void)
+extern void priority_p_reconfig(bool assoc_clear)
 {
 	reconfig = 1;
 	_internal_setup();
-	/* Since the used_cpu_run_secs has been reset by the reconfig
-	   we need to remove the time that has past since the last
-	   poll.  We can't just do the correct calculation in the
-	   first place because it will mess up everything in the poll
-	   since it is based off the g_last_ran time.
-	*/
-	_init_grp_used_cpu_run_secs(g_last_ran);
+
+	/* Since the used_cpu_run_secs has been reset by the reconfig,
+	 * we need to remove the time that has past since the last
+	 * poll.  We can't just do the correct calculation in the
+	 * first place because it will mess up everything in the poll
+	 * since it is based off the g_last_ran time.
+	 */
+	if (assoc_clear)
+		_init_grp_used_cpu_run_secs(g_last_ran);
 	debug2("%s reconfigured", plugin_name);
 
 	return;

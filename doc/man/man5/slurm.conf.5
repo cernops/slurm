@@ -776,7 +776,7 @@ The default value is unlimited (zero) and may not exceed 65533 seconds.
 The job accounting mechanism type.
 Acceptable values at present include "jobacct_gather/aix" (for AIX operating
 system), "jobacct_gather/linux" (for Linux operating system),
-"jobacct_gather/cgroup (experimental) and "jobacct_gather/none"
+"jobacct_gather/cgroup" (experimental) and "jobacct_gather/none"
 (no accounting data collected).
 The default value is "jobacct_gather/none".
 "jobacct_gather/cgroup" is an experimental plugin for the Linux operating system
@@ -787,21 +787,65 @@ cgroup cpuacct subsystem: user cpu time and system cpu time. No value
 is provided by cgroups for virtual memory size ('vsize').
 In order to use the \fBsstat\fR tool, "jobacct_gather/aix", "jobacct_gather/linux",
 or "jobacct_gather/cgroup" must be configured.
+.br
+\fBNOTE:\fR Changing this configuration parameter changes the contents of 
+the messages between Slurm daemons. Any previously running job steps are
+managed by a slurmstepd daemon that will persist through the lifetime of
+that job step and not change it's communication prototol. Only change this
+configuration parameter when there are no running job steps.
 
 .TP
 \fBJobAcctGatherFrequency\fR
-The job accounting sampling interval.
-For jobacct_gather/none this parameter is ignored.
-For  jobacct_gather/aix and jobacct_gather/linux the parameter is a number is
-seconds between sampling job state.
-The default value is 30 seconds.
-A value of zero disables real the periodic job sampling and provides accounting
-information only on job termination (reducing SLURM interference with the job).
-Smaller (non\-zero) values have a greater impact upon job performance, but
-a value of 30 seconds is not likely to be noticeable for applications having
-less than 10,000 tasks.
-Users can override this value on a per job basis using the \fB\-\-acctg\-freq\fR
-option when submitting the job.
+The job accounting and profiling sampling intervals.
+The supported format is follows:
+.RS
+.TP 12
+\fBJobAcctGatherFrequency=\fR\fI<datatype>\fR\fB=\fR\fI<interval>\fR
+where \fI<datatype>\fR=\fI<interval>\fR specifies the task sampling
+interval for the jobacct_gather plugin or a
+sampling interval for a profiling type by the
+acct_gather_profile plugin. Multiple,
+comma-separated \fI<datatype>\fR=\fI<interval>\fR intervals
+may be specified. Supported datatypes are as follows:
+.RS
+.TP
+\fBtask=\fI<interval>\fR
+where \fI<interval>\fR is the task sampling interval in seconds
+for the jobacct_gather plugins and for task
+profiling by the acct_gather_profile plugin.
+.TP
+\fBenergy=\fI<interval>\fR
+where \fI<interval>\fR is the sampling interval in seconds
+for energy profiling using the acct_gather_energy plugin
+.TP
+\fBnetwork=\fI<interval>\fR
+where \fI<interval>\fR is the sampling interval in seconds
+for infiniband profiling using the acct_gather_infiniband
+plugin.
+.TP
+\fBfilesystem=\fI<interval>\fR
+where \fI<interval>\fR is the sampling interval in seconds
+for filesystem profiling using the acct_gather_filesystem
+plugin.
+.TP
+.RE
+.RE
+The default value for task sampling interval
+is 30 seconds. The default value for all other intervals is 0.
+An interval of 0 disables sampling of the specified type.
+If the task sampling interval is 0, accounting
+information is collected only at job termination (reducing SLURM
+interference with the job).
+.br
+.br
+Smaller (non\-zero) values have a greater impact upon job performance,
+but a value of 30 seconds is not likely to be noticeable for
+applications having less than 10,000 tasks.
+.br
+.br
+Users can independently override each interval on a per job basis using the
+\fB\-\-acctg\-freq\fR option when submitting the job.
+.RE
 
 .TP
 \fBJobCheckpointDir\fR
@@ -1214,6 +1258,8 @@ Supported values are "YES" and "NO".  The default value is "NO".
 \fBPriorityFlags\fR
 Flags to modify priority behavior
 Applicable only if PriorityType=priority/multifactor.
+The keywords below have no associated value
+(e.g. "PriorityFlags=ACCRUE_ALWAYS,SMALL_RELATIVE_TO_TIME").
 .RS
 .TP 17
 \fBACCRUE_ALWAYS\fR
@@ -1327,30 +1373,31 @@ Acceptable values include:
 .RS
 .TP
 \fBaccounts\fR
-(NON-SLURMDBD ACCOUNTING ONLY) prevents users from viewing any account
+(NON-SLURMDBD ACCOUNTING ONLY) Prevents users from viewing any account
 definitions unless they are coordinators of them.
 .TP
 \fBjobs\fR
-prevents users from viewing jobs or job steps belonging
-to other users. (NON-SLURMDBD ACCOUNTING ONLY) prevents users from viewing
+Prevents users from viewing jobs or job steps belonging
+to other users. (NON-SLURMDBD ACCOUNTING ONLY) Prevents users from viewing
 job records belonging to other users unless they are coordinators of
 the association running the job when using sacct.
 .TP
 \fBnodes\fR
-prevents users from viewing node state information.
+Prevents users from viewing node state information.
 .TP
 \fBpartitions\fR
-prevents users from viewing partition state information.
+Prevents users from viewing partition state information.
 .TP
 \fBreservations\fR
-prevents regular users from viewing reservations.
+Prevents regular users from viewing reservations.
 .TP
 \fBusage\fR
-(NON-SLURMDBD ACCOUNTING ONLY) prevents users from viewing
-usage of any other user.  This applies to sreport.
+Prevents users from viewing usage of any other user, this applies to sshare.
+(NON-SLURMDBD ACCOUNTING ONLY) Prevents users from viewing
+usage of any other user, this applies to sreport.
 .TP
 \fBusers\fR
-(NON-SLURMDBD ACCOUNTING ONLY) prevents users from viewing
+(NON-SLURMDBD ACCOUNTING ONLY) Prevents users from viewing
 information of any user other than themselves, this also makes it so users can
 only see associations they deal with.
 Coordinators can see associations of all users they are coordinator of,
@@ -1701,10 +1748,17 @@ Multiple options may be comma separated.
 .TP
 \fBdefault_queue_depth=#\fR
 The default number of jobs to attempt scheduling (i.e. the queue depth) when a
-running job completes or other routine actions occur. The full queue will be
-tested on a less frequent basis. The default value is 100.
+running job completes or other routine actions occur.
+The full queue will be tested on a less frequent basis.
+The default value is 100.
 In the case of large clusters (more than 1000 nodes), configuring a relatively
 small value may be desirable.
+Specifying a large value (say 1000 or higher) can be expected to result in
+poor system responsiveness since this scheduling logic will not release
+locks for other events to occur.
+It would be better to let the backfill scheduler process a larger number of jobs
+(see \fBmax_job_bf\fR, \fBbf_continue\fR  and other options here for more
+information).
 .TP
 \fBdefer\fR
 Setting this option will avoid attempting to schedule each job
@@ -1759,6 +1813,12 @@ This option applies only to \fBSchedulerType=sched/backfill\fR.
 The number of minutes into the future to look when considering jobs to schedule.
 Higher values result in more overhead and less responsiveness.
 The default value is 1440 minutes (one day).
+A value at least as long as the highest allowed time limit is generally
+advisable to prevent job starvation.
+In order limit the amount of data managed by the backfill scheduler,
+if the value of \fBbf_window\fR is increased, then it is generally advisable
+to also increase \fBbf_resolution\fR.
+if 
 This option applies only to \fBSchedulerType=sched/backfill\fR.
 .TP
 \fBmax_job_bf=#\fR
@@ -1768,9 +1828,6 @@ Higher values result in more overhead and less responsiveness.
 Until an attempt is made to backfill schedule a job, its expected
 initiation time value will not be set.
 The default value is 50.
-In the case of large clusters (more than 1000 nodes) configured with
-\fBSelectType=select/cons_res\fR, configuring a relatively small value may be
-desirable.
 This option applies only to \fBSchedulerType=sched/backfill\fR.
 .TP
 \fBmax_depend_depth=#\fR

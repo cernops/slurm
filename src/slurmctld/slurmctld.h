@@ -648,6 +648,7 @@ struct job_record {
 						 * user/name at a time */
 #define SLURM_DEPEND_EXPAND		6	/* Expand running job */
 struct	depend_spec {
+	uint16_t	array_task_id;	/* INFINITE for all array tasks */
 	uint16_t	depend_type;	/* SLURM_DEPEND_* type */
 	uint32_t	job_id;		/* SLURM job_id */
 	struct job_record *job_ptr;	/* pointer to this job */
@@ -879,13 +880,21 @@ extern void excise_node_from_job(struct job_record *job_ptr,
 extern List feature_list_copy(List feature_list_src);
 
 /*
+ * find_job_array_rec - return a pointer to the job record with the given
+ *	array_job_id/array_task_id
+ * IN job_id - requested job's id
+ * IN array_task_id - requested job's task id (NO_VAL if none specified)
+ * RET pointer to the job's record, NULL on error
+ */
+extern struct job_record *find_job_array_rec(uint32_t array_job_id,
+					     uint16_t array_task_id);
+
+/*
  * find_job_record - return a pointer to the job record with the given job_id
  * IN job_id - requested job's id
  * RET pointer to the job's record, NULL on error
- * global: job_list - global job list pointer
- *	job_hash - hash table into job records
  */
-extern struct job_record *find_job_record (uint32_t job_id);
+struct job_record *find_job_record(uint32_t job_id);
 
 /*
  * find_first_node_record - find a record for first node in the bitmap
@@ -1406,8 +1415,8 @@ extern void make_node_idle(struct node_record *node_ptr,
 
 /*
  * Determine of the specified job can execute right now or is currently
- * blocked by a miscellaneous limit. This does not re-validate job state,
- * but relies upon schedule() in src/slurmctld/job_scheduler.c to do so.
+ * blocked by a partition state or limit. These job states should match the
+ * reason values returned by job_limits_check().
  */
 extern bool misc_policy_job_runnable_state(struct job_record *job_ptr);
 

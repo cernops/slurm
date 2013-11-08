@@ -3,6 +3,65 @@ documents those changes that are of interest to users and admins.
 
 * Changes in Slurm 2.6.4
 ========================
+ -- Fixed sh5util to print its usage.
+ -- Corrected commit f9a3c7e4e8ec.
+ -- Honor ntasks-per-node option with exclusive node allocations.
+ -- sched/backfill - Prevent invalid memory reference if bf_continue option is
+    configured and slurm is reconfigured during one of the sleep cycles or if
+    there are any changes to the partition configuration or if the normal
+    scheduler runs and starts a job that the backfill scheduler is actively
+    working on.
+ -- Update man pages information about acct-freq and JobAcctGatherFrequency
+    to reflect only the latest supported format.
+ -- Minor document update to include note about PrivateData=Usage for the
+    slurm.conf when using the DBD.
+ -- Expand information reported with DebugFlags=backfill.
+ -- Initiate jobs pending to run in a reservation as soon as the reservation
+    becomes active.
+ -- Purged expired reservation even if it has pending jobs.
+ -- Corrections to calculation of a pending job's expected start time.
+ -- Remove some vestigial logic treating job priority of 1 as a special case.
+ -- Memory freeing up to avoid minor memory leaks at close of daemons
+ -- Updated documentation to give correct units being displayed.
+ -- Report AccountingStorageBackupHost with "scontrol show config".
+ -- init scripts ignore quotes around Pid file name specifications.
+ -- Fixed typo about command case in quickstart.html.
+ -- task/cgroup - handle new cpuset files, similar to commit c4223940.
+ -- Replace the tempname() function call with mkstemp().
+ -- Fix for --cpu_bind=map_cpu/mask_cpu/map_ldom/mask_ldom plus
+    --mem_bind=map_mem/mask_mem options, broken in 2.6.2.
+ -- Restore default behavior of allocating cores to jobs on a cyclic basis
+    across the sockets unless SelectTypeParameters=CR_CORE_DEFAULT_DIST_BLOCK
+    or user specifies other distribution options.
+ -- Enforce JobRequeue configuration parameter on node failure. Previously
+    always requeued the job.
+ -- acct_gather_energy/ipmi - Add delay before retry on read error.
+ -- select/cons_res with GRES and multiple threads per core, fix possible
+    infinite loop.
+ -- proctrack/cgroup - Add cgroup create retry logic in case one step is
+    starting at the same time as another step is ending and the logic to create
+    and delete cgroups overlaps.
+ -- Improve setting of job wait "Reason" field.
+ -- Correct sbatch documentation and job_submit/pbs plugin "%j" is job ID,
+    not "%J" (which is job_id.step_id).
+ -- Improvements to sinfo performance, especially for large numbers of
+    partitions.
+ -- SlurmdDebug - Permit changes to slurmd debug level with "scontrol reconfig"
+ -- smap - Avoid invalid memory reference with hidden nodes.
+ -- Fix sacctmgr modify qos set preempt+/-=.
+ -- BLUEGENE - fix issue where node count wasn't set up correctly when srun
+    preforms the allocation, regression in 2.6.3.
+ -- Add support for dependencies of job array elements (e.g. 
+    "sbatch --depend=afterok:123_4 ...") or all elements of a job array (e.g.
+    "sbatch --depend=afterok:123 ...").
+ -- Add support for new options in sbatch qsub wrapper:
+    -W block=true	(wait for job completion)
+    Clear PBS_NODEFILE environment variable
+ -- Fixed the MaxSubmitJobsPerUser limit in QOS which limited submissions
+    a job too early.
+ -- sched/wiki, sched/wiki2 - Fix to work with change logic introduced in
+    version 2.6.3 preventing Maui/Moab from starting jobs.
+ -- Updated the QOS limits documentation and man page.
 
 * Changes in Slurm 2.6.3
 ========================
@@ -144,6 +203,8 @@ documents those changes that are of interest to users and admins.
  -- Fix issue with potentially referencing past an array in parse_time()
  -- CRAY - fix issue with accelerators on a cray when parsing BASIL 1.3 XML.
  -- Fix issue with a 2.5 slurmstepd locking up when talking to a 2.6 slurmd.
+ -- Add argument to priority plugin's priority_p_reconfig function to note
+    when the association and QOS used_cpu_run_secs field has been reset.
 
 * Changes in Slurm 2.6.0
 ========================
@@ -318,6 +379,9 @@ documents those changes that are of interest to users and admins.
  -- Reorder get config logic to avoid deadlock.
  -- Enforce QOS MaxCPUsMin limit when job submission contains no user-specified
     time limit.
+ -- EpilogSlurmctld pthread is passed required arguments rather than a pointer
+    to the job record, which under some conditions could be purged and result
+    in an invalid memory reference.
 
 * Changes in Slurm 2.5.7
 ========================
